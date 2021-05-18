@@ -1,0 +1,265 @@
+diff --git a/diffextractor.py b/diffextractor.py
+new file mode 100644
+index 0000000..1ece96e
+--- /dev/null
++++ b/diffextractor.py
+@@ -0,0 +1,73 @@
++import re
++
++class DiffExtractor(object):
++
++    def __init__(self, diff_file_path):
++        self.diff_file_path = diff_file_path
++
++    def extract_filename_linenumber(self, diff_file_linenumber):
++        """
++        For a validated secret, extracts the filename and linenumber where the secret was found.
++
++        Accepts:
++            diff_file_path: string, the path to the diff file
++            diff_file_linenumber: int, the line number in the diff file where the secret was found
++        Returns: dict
++            - key: the filename where the secret was found
++            - value: the linenumber where the secret was found in the original file
++        """
++        filenames_regex = re.compile("(?:\+\+\+ |--- )(.*\/.*)")
++        linenumber_regex = re.compile("(?:@@ -)([0-9]+),(?:[0-9]+)(?: \+)([0-9]+),(?:[0-9]+)(?: @@)")
++
++        filename = ''
++        file_linenumber = 0
++        with open(self.diff_file_path, 'r') as diff_file:
++            diff_file_lines = diff_file.readlines()
++            ln = 0
++            plus_lines = 0
++            minus_lines = 0
++            for line in diff_file_lines:
++                ln += 1
++                if line[0:2] == '+ ':
++                    plus_lines += 1
++                elif line[0:2] == '- ':
++                    minus_lines += 1
++
++                filename_matches = re.findall(filenames_regex, line)
++                if filename_matches and ln < diff_file_linenumber:
++                    filename = filename_matches[0]
++                    # trim the a/ or b/ off the beginning
++                    filename = filename[filename.find('/')+1:]
++
++                linenumber_matches = re.findall(linenumber_regex, line)
++                if linenumber_matches and ln < diff_file_linenumber:
++                    # linenumber_matches format: [(OLD_LINENUMBER,NEW_LINENUMBER)]
++                    # signifying the line number in the file where the diff begins
++                    # before and after the change, respecively
++
++                    # diff_file_linenumber - ln - 1 gives us the distance between the line where
++                    # the linenumber_matches were found and the line where the secret is
++                    if diff_file_lines[diff_file_linenumber][0] == '+':
++                        file_linenumber = diff_file_linenumber - ln - 1 + int(linenumber_matches[0][1])
++                    elif diff_file_lines[diff_file_linenumber][0] == '-':
++                        file_linenumber = diff_file_linenumber - ln - 1 + int(linenumber_matches[0][0])
++                    else:
++                        file_linenumber = diff_file_linenumber - ln - 1 + int(linenumber_matches[0][1])
++
++                    # each time we find a linenumber_match, we reset the plus and minus line counts
++                    plus_lines = 0
++                    minus_lines = 0
++
++                # If we're reporting an added secret, we don't count
++                # the minus lines that appear before the secret in the diff.
++                # If the secret was removed, we don't counthe plus lines.
++                if ln == diff_file_linenumber:
++                    if diff_file_lines[diff_file_linenumber][0] == '+':
++                        file_linenumber -= minus_lines
++                    elif diff_file_lines[diff_file_linenumber][0] == '-':
++                        file_linenumber -= plus_lines
++                    else:
++                        file_linenumber -= minus_lines
++
++                    print("The secret was found in %s on linenumber %s." % (filename, file_linenumber))
++                    return {filename: file_linenumber}
+diff --git a/diffextractor_test.py b/diffextractor_test.py
+new file mode 100644
+index 0000000..dab5836
+--- /dev/null
++++ b/diffextractor_test.py
+@@ -0,0 +1,38 @@
++import os
++from unittest import TestCase
++from diffextractor import DiffExtractor
++
++class DiffScanWorkerTest (TestCase):
++
++    def setUp(self):
++        self.diffextractor = DiffExtractor('./test_data/test_diff.txt')
++
++    def test_extract_filename_linenumber(self):
++        """
++        extract_filename_linenumber(diff_file_linenumber) should return the
++        expected linenumber where a secret was located in the source file
++        if given the line where the secret was found in the diff file
++        """
++
++        expected_filename = 'diffscanworker.py'
++        assert expected_filename in self.diffextractor.extract_filename_linenumber(14).keys()
++
++        result = self.diffextractor.extract_filename_linenumber(14)[expected_filename]
++        expected = 40
++        self.assertEqual(result, expected)
++
++        result = self.diffextractor.extract_filename_linenumber(25)[expected_filename]
++        expected = 49
++        self.assertEqual(result, expected)
++
++        result = self.diffextractor.extract_filename_linenumber(34)[expected_filename]
++        expected = 55
++        self.assertEqual(result, expected)
++
++        result = self.diffextractor.extract_filename_linenumber(93)[expected_filename]
++        expected = 213
++        self.assertEqual(result, expected)
++
++        result = self.diffextractor.extract_filename_linenumber(109)[expected_filename]
++        expected = 240
++        self.assertEqual(result, expected)
+diff --git a/diffscanworker.py b/diffscanworker.py
+index 1a08fcd..879f904 100644
+--- a/diffscanworker.py
++++ b/diffscanworker.py
+@@ -168,71 +168,6 @@ def write_to_queue(self, message, topic_name):
+         finally:
+             self.producer.flush()
+
+-    def extract_filename_linenumber(self, diff_file_linenumber):
+-        """
+-        For a validated secret, extracts the filename and linenumber where the secret was found.
+-
+-        Accepts: int, the line number in the diff file where the secret was found
+-        Returns: dict
+-            - key: the filename where the secret was found
+-            - value: the linenumber where the secret was found in the original file
+-        """
+-        filenames_regex = re.compile("(?:\+\+\+ |--- )(.*\/.*)")
+-        linenumber_regex = re.compile("(?:@@ -)([0-9]+),(?:[0-9]+)(?: \+)([0-9]+),(?:[0-9]+)(?: @@)")
+-
+-        filename = ''
+-        file_linenumber = 0
+-        with open('./diff.txt', 'r') as diff_file:
+-            diff_file_lines = diff_file.readlines()
+-            ln = 0
+-            plus_lines = 0
+-            minus_lines = 0
+-            for line in diff_file_lines:
+-                ln += 1
+-                if line[0:2] == '+ ':
+-                    plus_lines += 1
+-                elif line[0:2] == '- ':
+-                    minus_lines += 1
+-
+-                filename_matches = re.findall(filenames_regex, line)
+-                if filename_matches and ln < diff_file_linenumber:
+-                    filename = filename_matches[0]
+-                    # trim the a/ or b/ off the beginning
+-                    filename = filename[filename.find('/')+1:]
+-
+-                linenumber_matches = re.findall(linenumber_regex, line)
+-                if linenumber_matches and ln < diff_file_linenumber:
+-                    # linenumber_matches format: [(OLD_LINENUMBER,NEW_LINENUMBER)]
+-                    # signifying the line number in the file where the diff begins
+-                    # before and after the change, respecively
+-
+-                    # diff_file_linenumber - ln - 1 gives us the distance between the line where
+-                    # the linenumber_matches were found and the line where the secret is
+-                    if diff_file_lines[diff_file_linenumber][0] == '+':
+-                        file_linenumber = diff_file_linenumber - ln - 1 + int(linenumber_matches[0][1])
+-                    elif diff_file_lines[diff_file_linenumber][0] == '-':
+-                        file_linenumber = diff_file_linenumber - ln - 1 + int(linenumber_matches[0][0])
+-                    else:
+-                        file_linenumber = diff_file_linenumber - ln - 1 + int(linenumber_matches[0][1])
+-
+-                    # each time we find a linenumber_match, we reset the plus and minus line counts
+-                    plus_lines = 0
+-                    minus_lines = 0
+-
+-                # If we're reporting an added secret, we don't count
+-                # the minus lines that appear before the secret in the diff.
+-                # If the secret was removed, we don't counthe plus lines.
+-                if ln == diff_file_linenumber:
+-                    if diff_file_lines[diff_file_linenumber][0] == '+':
+-                        file_linenumber -= minus_lines
+-                    elif diff_file_lines[diff_file_linenumber][0] == '-':
+-                        file_linenumber -= plus_lines
+-                    else:
+-                        file_linenumber -= minus_lines
+-
+-                    print("The secret was found in %s on linenumber %s." % (filename, file_linenumber))
+-                    return {filename: file_linenumber}
+-
+     def scan_pipeline_tester_commit(self):
+         """
+         Scans a diff file from our git-defenders/pipeline-tester repo for test secrets.
+diff --git a/diffscanworker_test.py b/diffscanworker_test.py
+deleted file mode 100644
+index 651dfcb..0000000
+--- a/diffscanworker_test.py
++++ /dev/null
+@@ -1,60 +0,0 @@
+-import os
+-from unittest import TestCase
+-from diffscanworker import DiffScanWorker
+-
+-class DiffScanWorkerTest (TestCase):
+-
+-    def setUp(self):
+-        test_kafka_config = {
+-            'bootstrap.servers': ['fake_servers'],
+-            'security.protocol': 'SASL_SSL',
+-            'sasl.mechanisms': 'PLAIN',
+-            'sasl.username': 'fake_username',
+-            'sasl.password': 'fake_password',
+-            'client.id': 'fake_client',
+-            'group.id': 'fake_group'
+-        }
+-        diff_scan_topic = 'fake_diff_scan_topic'
+-        notification_topic = 'fake_notification_topic'
+-        self.diffscanworker = DiffScanWorker(test_kafka_config, diff_scan_topic,
+-                                             notification_topic)
+-
+-        test_diff_path = './test_data/test_diff.txt'
+-        with open(test_diff_path, "r") as source:
+-            with open('./diff.txt', "w") as sink:
+-                source_data = source.read()
+-                sink.write(source_data)
+-
+-    def tearDown(self):
+-        os.remove("./diff.txt")
+-
+-    def test_extract_filename_linenumber(self):
+-        """
+-        extract_filename_linenumber(diff_file_linenumber) should return the
+-        expected linenumber where a secret was located in the source file
+-        if given the line where the secret was found in the diff file
+-        """
+-
+-
+-        expected_filename = 'diffscanworker.py'
+-        assert expected_filename in self.diffscanworker.extract_filename_linenumber(14).keys()
+-
+-        result = self.diffscanworker.extract_filename_linenumber(14)[expected_filename]
+-        expected = 40
+-        self.assertEqual(result, expected)
+-
+-        result = self.diffscanworker.extract_filename_linenumber(25)[expected_filename]
+-        expected = 49
+-        self.assertEqual(result, expected)
+-
+-        result = self.diffscanworker.extract_filename_linenumber(34)[expected_filename]
+-        expected = 55
+-        self.assertEqual(result, expected)
+-
+-        result = self.diffscanworker.extract_filename_linenumber(93)[expected_filename]
+-        expected = 213
+-        self.assertEqual(result, expected)
+-
+-        result = self.diffscanworker.extract_filename_linenumber(109)[expected_filename]
+-        expected = 240
+-        self.assertEqual(result, expected)

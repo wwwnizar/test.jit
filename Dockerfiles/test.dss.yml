@@ -1,0 +1,18 @@
+# container-structure-test file
+
+schemaVersion: '2.0.0'
+
+commandTests:
+  - name: "gunicorn run"
+    setup: []
+    command: "gunicorn"
+    args: ["--version"]
+    expectedOutput: ["gunicorn \\(version .*\\)"]
+    exitCode: 0
+
+  - name: "detect-secrets run"
+    setup: []
+    command: "detect-secrets"
+    args: ["--version"]
+    expectedOutput: ["0.*ibm.*\n"] # such as 0.13.1+ibm.18.dss
+    exitCode: 0

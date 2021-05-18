@@ -1,0 +1,15 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: scan-worker
+  labels:
+    name: scan-worker
+    type: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: networking.k8s.io/v1beta1
+    kind: Deployment
+    name: scan-worker
+  minReplicas: 12
+  maxReplicas: 12
+  targetCPUUtilizationPercentage: 90

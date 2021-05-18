@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sqlexporter
+spec:
+  selector:
+    matchLabels:
+      app: sqlexporter
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sqlexporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "14269"
+    spec:
+      containers:
+          - name: sqlexporter
+            image: "us.icr.io/git-defenders/dss:latest"
+            imagePullPolicy: IfNotPresent
+            command: ["python"]
+            args: ["-m", "detect_secrets_stream.sql_exporter.db_metrics"]
+            env:
+            - name: GD_DB_CONF
+              value: "/gd-db-conf/gd_db.conf"
+            volumeMounts:
+            - name: gd-db-conf
+              mountPath: "/gd-db-conf"
+              readOnly: true
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                cpu: 1
+                memory: 256Mi
+      volumes:
+      - name: gd-db-conf
+        secret:
+          secretName: gd-db-conf
+          items:
+          - key: gd_db.conf
+            path: gd_db.conf

@@ -1,0 +1,111 @@
+diff --git a/diffscanworker.py b/diffscanworker.py
+index 419e03d..879f904 100644
+--- a/diffscanworker.py
++++ b/diffscanworker.py
+@@ -21,6 +21,7 @@
+ import requests
+ import subprocess
+ import json
++import re
+ from confluent_kafka import Producer, Consumer
+ from Crypto.Cipher import AES
+ from Crypto.Cipher import PKCS1_OAEP
+@@ -39,21 +40,20 @@ def __init__(self, conf, diff_scan_topic, notification_topic):
+     def stop(self):
+         self.running = False
+
+-    def create_diff_file(self, repo, branch, commit):
++    def create_diff_file(self, repo, commit):
+         """
+         Creates a diff file for a given commit on a repo.
+         """
+         headers = {'Authorization': 'token %s' % os.environ['GITHUB_OAUTH_TOKEN'],
+                    'Accept': 'application/vnd.github.v3.diff'}
+         try:
+-            response = requests.get('https://github.com/api/v3/repos/%s:%s/commits/%s' % (repo, branch, commit), headers=headers)
++            response = requests.get('https://github.com/api/v3/repos/%s/commits/%s' % (repo, commit), headers=headers)
+         except Exception as e:
+             print(e)
+
+         # write diff to file for scanning
+-        file = open("./diff.txt", "w")
+-        file.write(response.text)
+-        file.close()
++        with open("./diff.txt", "w") as diff_file:
++            diff_file.write(response.text)
+
+     def run_detect_secrets(self):
+         """
+@@ -97,6 +97,11 @@ def validate_secrets(self, detect_secrets_output):
+                         # the api response has useful data in it too
+                         # which we may want to use
+                         # see https://api.slack.com/methods/auth.test
++                if secret_type == 'Test Secret':
++                    secret = result['secret']
++                    if secret_type not in validated_secrets:
++                        validated_secrets[secret_type] = []
++                    validated_secrets[secret_type].append(secret)
+
+         return validated_secrets
+
+@@ -112,8 +117,9 @@ def encrypt_validated_secrets(self, validated_secrets):
+         rsaKey = RSA.importKey(os.environ['PUB_KEY'])
+         pkcs1Cipher = PKCS1_OAEP.new(rsaKey)
+         encrypted_secrets = {}
+-        for secret_type, secret_list in validated_secrets:
++        for secret_type, secret_list in validated_secrets.items():
+             for secret in secret_list:
++                secret = str.encode(secret)
+                 encrypted_secret = pkcs1Cipher.encrypt(secret)
+                 if secret_type not in encrypted_secrets:
+                     encrypted_secrets[secret_type] = []
+@@ -162,6 +168,25 @@ def write_to_queue(self, message, topic_name):
+         finally:
+             self.producer.flush()
+
++    def scan_pipeline_tester_commit(self):
++        """
++        Scans a diff file from our git-defenders/pipeline-tester repo for test secrets.
++
++        Returns: dict (mimics format of detect secrets output)
++        """
++        pattern = re.compile("(git-defenders-test-secret-[0-9]{4}(?:-[0-9]{2}){3}(?::[0-9]{2}){2})")
++
++        # format to mimic detect-secrets output
++        test_secrets = {'results': {'diff.txt': []}}
++        with open('./diff.txt', 'r') as diff_file:
++            diff_file_lines = diff_file.readlines()
++            for line in diff_file_lines:
++                matches = re.findall(pattern, line)
++                for match in matches:
++                    test_secrets['results']['diff.txt'].append({'type': 'Test Secret', 'secret': match})
++                    print('Found test secret: %s' % match)
++
++        return json.dumps(test_secrets)
+
+     @asyncio.coroutine
+     def run(self):
+@@ -185,7 +210,7 @@ def run(self):
+                 user = jsonPayload['githubUser']
+
+                 # get diff of commit
+-                self.create_diff_file(repo, branch, commit)
++                self.create_diff_file(repo, commit)
+
+                 # run detect-secrets
+                 detect_secrets_output = self.run_detect_secrets()
+@@ -204,6 +229,14 @@ def run(self):
+                     message = json.dumps({'token_id': token_id})
+                     self.write_to_queue(message, self.notification_topic)
+
++                # if commit came from our pipeline-tester repo, scan for test secrets,
++                # "validate" them, encrypt them, then write them to db
++                if repo == 'git-defenders/pipeline-tester':
++                    test_secrets = self.scan_pipeline_tester_commit()
++                    validated_test_secrets = self.validate_secrets(test_secrets)
++                    encrypted_test_secrets = self.encrypt_validated_secrets(validated_test_secrets)
++                    self.write_to_db(encrypted_test_secrets, commit, repo, branch, user)
++
+             else:
+                 print('No messages consumed.')
+                 yield from asyncio.sleep(2)

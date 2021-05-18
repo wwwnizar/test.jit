@@ -1,0 +1,60 @@
+apiVersion: skaffold/v2beta8
+kind: Config
+metadata:
+  name: detect-secrets-stream
+
+build:
+  local:
+    useDockerCLI: true
+  tagPolicy:
+    envTemplate:
+      template: "{{.VERSION}}"
+  artifacts:
+  - image: us.icr.io/git-defenders/dss
+    context: .
+    docker:
+      dockerfile: Dockerfiles/Dockerfile.dss
+
+test:
+  - image: us.icr.io/git-defenders/dss
+    structureTests:
+    - Dockerfiles/test.dss.yml
+
+profiles:
+  # for local personal dev
+  - name: dev
+    build:
+      local:
+        useDockerCLI: true
+        push: false
+      tagPolicy:
+        gitCommit:
+          # replace this field with your own prefix
+          prefix: myname-
+      artifacts:
+      - image: us.icr.io/git-defenders/dss
+        context: .
+        docker:
+          dockerfile: Dockerfiles/Dockerfile.dss
+
+    deploy:
+      kustomize:
+        paths: ["kustomize_envs/dev"]
+
+    portForward:
+    - resourceType: deployment
+      namespace: dev
+      resourceName: gd-revoker
+      port: 5000
+      localPort: 5000
+    - resourceType: deployment
+      namespace: dev
+      resourceName: gd-ingest
+      port: 5000
+      localPort: 5001
+
+  # for build image locally but do not push
+  - name: build-no-push
+    build:
+      local:
+        push: false

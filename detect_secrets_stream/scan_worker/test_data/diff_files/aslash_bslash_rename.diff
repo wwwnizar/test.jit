@@ -1,0 +1,16 @@
+diff --git a/a b/a b/a b/b
+similarity index 50%
+rename from a b/a
+rename to a b/b
+index 6286753..50c7e85 100644
+--- a/a b/a
++++ b/a b/b
+@@ -3,3 +3,8 @@ Under the sea
+ Down where it's wetter
+-Down where it's better
+ Take it from meeeee
++
++Sing along with me
++All the creatures of the sea
++If you wanna have fun
++Gotta swim like meeee

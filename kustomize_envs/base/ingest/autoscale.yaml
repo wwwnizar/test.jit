@@ -1,0 +1,15 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: gd-ingest
+  labels:
+    name: gd-ingest
+    type: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: networking.k8s.io/v1beta1
+    kind: Deployment
+    name: gd-ingest
+  minReplicas: 3
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 90

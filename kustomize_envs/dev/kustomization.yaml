@@ -1,0 +1,114 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dev # create namespace ahead of time
+resources:
+  # dss services
+  - ../base/revoker
+  - ../base/scan_worker
+  - ../base/ingest
+
+  # cron jobs
+  # - ../base/pi_cleaner
+  # - ../base/revalidation
+  # - ../base/vmt_report
+
+  # ingress
+  # - ../base/ingress
+
+  # cluster settings
+  # - ../base/cluster
+
+  # support
+  # - ../base/support
+
+  # dev dependencies
+  - postgres.yaml
+  - vault.yaml
+
+# Requires using 3.8.1 kustomize. It's not supported in "kubectl kustomize" yet
+replicas:
+- name: gd-revoker
+  count: 1
+- name: gd-ingest
+  count: 1
+- name: scan-worker
+  count: 1
+
+patches:
+- patch: |-
+    - op: replace
+      path: /spec/minReplicas
+      value: 1
+  target:
+    kind: HorizontalPodAutoscaler
+    labelSelector: "name=gd-ingest"
+- patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 1
+  target:
+    kind: HorizontalPodAutoscaler
+    labelSelector: "name=gd-ingest"
+- patch: |-
+    - op: replace
+      path: /spec/minReplicas
+      value: 1
+  target:
+    kind: HorizontalPodAutoscaler
+    labelSelector: "name=scan-worker"
+- patch: |-
+    - op: replace
+      path: /spec/maxReplicas
+      value: 1
+  target:
+    kind: HorizontalPodAutoscaler
+    labelSelector: "name=scan-worker"
+
+generatorOptions:
+  # disableNameSuffixHash is true disables the default behavior of adding a
+  # suffix to the names of generated resources that is a hash of
+  # the resource contents.
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: postgres-init-db
+  files:
+  - init.sql
+- name: vault-init-script
+  files:
+  - vault_init.sh
+
+secretGenerator:
+- name: gd-pri-key
+  files:
+  - encryption.key=secret_generated/test.key
+  type: Opaque
+- name: gd-pub-key
+  files:
+  - encryption.key.pub=secret_generated/test.key.pub
+  type: Opaque
+- name: gd-db-conf
+  files:
+  - gd_db.conf=secret_manual/gd_db.conf
+  type: Opaque
+- name: gd-dc-secret
+  files:
+  - dc_iv_file=secret_generated/dc_iv_file
+  - dc_key_file=secret_generated/dc_key_file
+  type: Opaque
+- name: gd-secret-1.0.0
+  envs:
+  - secret_manual/env.txt
+  files:
+  - app_key=secret_manual/app.key # manual, GitHub app private key
+  - kafka_conf=secret_manual/kafka.conf # manual, test instance from ibm event stream
+  - basic_auth_conf=secret_generated/basic_auth.conf # generated
+  - github_conf=secret_manual/github.conf # manual, one GHE PAT
+  - hmac_key=secret_generated/test-hmac.key # generated
+  - vault_prod_conf=secret_generated/vault.conf  # generated
+  - db2_license=secret_manual/db2consv_zs.lic  # manual, a valid db2consv_zs.lic
+  - ghe_revocation_token=secret_manual/ghe_revocation.token # manual
+  - iam_conf=secret_manual/iam.conf # manual
+  - revoker_urls_conf=secret_manual/revoker_urls.conf # manual
+  type: Opaque

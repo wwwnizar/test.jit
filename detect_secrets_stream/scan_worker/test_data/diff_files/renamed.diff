@@ -1,0 +1,51 @@
+diff --git a/diffextractor.py b/diffrn.py
+similarity index 100%
+rename from diffextractor.py
+rename to diffrn.py
+--- a/diffextractor.py
++++ b/diffrn.py
+@@ -21,6 +21,7 @@
+ import requests
+ import subprocess
+ import json
++import re
+ from confluent_kafka import Producer, Consumer
+ from Crypto.Cipher import AES
+ from Crypto.Cipher import PKCS1_OAEP
+@@ -39,21 +40,20 @@ def __init__(self, conf, diff_scan_topic, notification_topic):
+     def stop(self):
+         self.running = False
+
+-    def create_diff_file(self, repo, branch, commit):
++    def create_diff_file(self, repo, commit):
+         """
+         Creates a diff file for a given commit on a repo.
+         """
+         headers = {'Authorization': 'token %s' % os.environ['GITHUB_OAUTH_TOKEN'],
+                    'Accept': 'application/vnd.github.v3.diff'}
+         try:
+-            response = requests.get('https://github.com/api/v3/repos/%s:%s/commits/%s' % (repo, branch, commit), headers=headers)
++            response = requests.get('https://github.com/api/v3/repos/%s/commits/%s' % (repo, commit), headers=headers)
+         except Exception as e:
+             print(e)
+
+         # write diff to file for scanning
+-        file = open("./diff.txt", "w")
+-        file.write(response.text)
+-        file.close()
++        with open("./diff.txt", "w") as diff_file:
++            diff_file.write(response.text)
+
+     def run_detect_secrets(self):
+         """
+@@ -97,6 +97,11 @@ def validate_secrets(self, detect_secrets_output):
+                         # the api response has useful data in it too
+                         # which we may want to use
+                         # see https://api.slack.com/methods/auth.test
++                if secret_type == 'Test Secret':
++                    secret = result['secret']
++                    if secret_type not in validated_secrets:
++                        validated_secrets[secret_type] = []
++                    validated_secrets[secret_type].append(secret)
+
+         return validated_secrets

@@ -1,0 +1,50 @@
+diff --git a/Dockerfile b/Dockerfile
+index 456100d..dc6b7e2 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -44,9 +44,6 @@ RUN rm -rf /root/.ssh/
+ # Stage 2
+ FROM python
+
+-# Remove the fake gd_db_tools that exists for testing until mono-repo is implemented
+-RUN rm -f ./gd_db_tools.py
+-
+ # Copy /whitewater-detect-secrets from builder stage
+ COPY --from=builder /whitewater-detect-secrets /whitewater-detect-secrets
+
+diff --git a/diffscanworker_test.py b/diffscanworker_test.py
+index 16bb25c..651dfcb 100644
+--- a/diffscanworker_test.py
++++ b/diffscanworker_test.py
+@@ -20,10 +20,10 @@ def setUp(self):
+                                              notification_topic)
+
+         test_diff_path = './test_data/test_diff.txt'
+-        with open(test_diff_path, "r") as test_diff_source:
+-            with open('./diff.txt', "w") as test_diff_sink:
+-                source_data = test_diff_source.read()
+-                test_diff_sink.write(source_data)
++        with open(test_diff_path, "r") as source:
++            with open('./diff.txt', "w") as sink:
++                source_data = source.read()
++                sink.write(source_data)
+
+     def tearDown(self):
+         os.remove("./diff.txt")
+diff --git a/gd_db_tools.py b/gd_db_tools.py
+deleted file mode 100644
+index 3270292..0000000
+--- a/gd_db_tools.py
++++ /dev/null
+@@ -1,11 +0,0 @@
+-""" This file exists so that diffscanworker imports work during testing.
+-It will be deleted very soon, once we switch to mono-repo."""
+-
+-def connect_db():
+-    pass
+-
+-def add_token_row():
+-    pass
+-
+-def add_commit_row():
+-    pass

@@ -1,0 +1,112 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: vmt-report
+spec:
+  schedule: "0 2,6,10,14,18,22 * * *"  # daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: vmt-report
+            image: us.icr.io/git-defenders/dss:latest
+            imagePullPolicy: IfNotPresent
+            command: ["python"]
+            args: ["-m", "detect_secrets_stream.notification.vmt_report"]
+            env:
+              - name: GD_VMT_BOX_FOLDER_ID
+                value: "83503857499"
+              - name: GD_WATSON_BOX_FOLDER_ID
+                value: "94207592655"
+              - name: GD_BOX_CONFIG_FILE
+                value: "/box-secrets/box_config.json"
+              - name: GD_PRI_KEY_FILENAME
+                value: "/gd-pri-key/encryption.key"
+              - name: GD_PUB_KEY_FILENAME
+                value: "/gd-pub-key/encryption.key.pub"
+              - name: GD_DC_IV_FILENAME
+                value: "/gd-dc-secret/dc_iv_file"
+              - name: GD_DC_KEY_FILENAME
+                value: "/gd-dc-secret/dc_key_file"
+              - name: GD_DB_CONF
+                value: "/gd-db-conf/gd_db.conf"
+              - name: GD_IAM_CONF_FILENAME
+                value: "/gd-secret/iam.conf"
+              - name: GD_HMAC_KEY_FILENAME
+                value: "/gd-secret/hmac.key"
+              - name: GD_VAULT_CONF
+                value: "/gd-secret/vault.prod.conf"
+              - name: GD_GITHUB_CONF
+                value: "/gd-secret/github.conf"
+              - name: FF_INCLUDE_SECURITY_FOCALS
+                value: 'true'
+              - name: FF_INCLUDE_REPO_VISIBILITY
+                value: 'true'
+              - name: FF_INCLUDE_PRIVATE_IN_VMT_REPORT
+                value: 'true'
+            volumeMounts:
+            - name: box-secrets
+              mountPath: "/box-secrets"
+              readOnly: true
+            - name: gd-pri-key
+              mountPath: "/gd-pri-key"
+              readOnly: true
+            - name: gd-pub-key
+              mountPath: "/gd-pub-key"
+              readOnly: true
+            - name: gd-dc-secret
+              mountPath: "/gd-dc-secret"
+              readOnly: true
+            - name: gd-db-conf
+              mountPath: "/gd-db-conf"
+              readOnly: true
+            - name: gd-secret
+              mountPath: "/gd-secret"
+              readOnly: true
+          volumes:
+          - name: box-secrets
+            secret:
+              secretName: box-secrets
+              items:
+              - key: box_config.json
+                path: box_config.json
+          - name: gd-pri-key
+            secret:
+              secretName: gd-pri-key
+              items:
+              - key: encryption.key
+                path: encryption.key
+          - name: gd-pub-key
+            secret:
+              secretName: gd-pub-key
+              items:
+              - key: encryption.key.pub
+                path: encryption.key.pub
+          - name: gd-dc-secret
+            secret:
+              secretName: gd-dc-secret
+              items:
+              - key: dc_iv_file
+                path: dc_iv_file
+              - key: dc_key_file
+                path: dc_key_file
+          - name: gd-db-conf
+            secret:
+              secretName: gd-db-conf
+              items:
+              - key: gd_db.conf
+                path: gd_db.conf
+          - name: gd-secret
+            secret:
+              secretName: gd-secret-1.0.0
+              items:
+              - key: hmac_key
+                path: hmac.key
+              - key: iam_conf
+                path: iam.conf
+              - key: vault_prod_conf
+                path: vault.prod.conf
+              - key: github_conf
+                path: github.conf
+          restartPolicy: OnFailure

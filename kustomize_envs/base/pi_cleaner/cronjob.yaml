@@ -1,0 +1,89 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: pi-cleaner
+spec:
+  schedule: "0 5 * * *"  # every night at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: pi-cleaner
+            image: us.icr.io/git-defenders/dss:latest
+            imagePullPolicy: IfNotPresent
+            command: ["python"]
+            args: ["-m", "detect_secrets_stream.pi_cleaner.pi_cleaner"]
+            env:
+              - name: GD_PRI_KEY_FILENAME
+                value: "/gd-pri-key/encryption.key"
+              - name: GD_PUB_KEY_FILENAME
+                value: "/gd-pub-key/encryption.key.pub"
+              - name: GD_DC_IV_FILENAME
+                value: "/gd-dc-secret/dc_iv_file"
+              - name: GD_DC_KEY_FILENAME
+                value: "/gd-dc-secret/dc_key_file"
+              - name: GD_DB_CONF
+                value: "/gd-db-conf/gd_db.conf"
+              - name: GD_IAM_CONF_FILENAME
+                value: "/gd-secret/iam.conf"
+              - name: GD_HMAC_KEY_FILENAME
+                value: "/gd-secret/hmac.key"
+              - name: GD_VAULT_CONF
+                value: "/gd-secret/vault.prod.conf"
+              - name: DAYS_SINCE_REMEDIATION_TO_DELETE
+                value: "7"
+            volumeMounts:
+            - name: gd-pri-key
+              mountPath: "/gd-pri-key"
+              readOnly: true
+            - name: gd-pub-key
+              mountPath: "/gd-pub-key"
+              readOnly: true
+            - name: gd-dc-secret
+              mountPath: "/gd-dc-secret"
+              readOnly: true
+            - name: gd-db-conf
+              mountPath: "/gd-db-conf"
+              readOnly: true
+            - name: gd-secret
+              mountPath: "/gd-secret"
+              readOnly: true
+          volumes:
+          - name: gd-pri-key
+            secret:
+              secretName: gd-pri-key
+              items:
+              - key: encryption.key
+                path: encryption.key
+          - name: gd-pub-key
+            secret:
+              secretName: gd-pub-key
+              items:
+              - key: encryption.key.pub
+                path: encryption.key.pub
+          - name: gd-dc-secret
+            secret:
+              secretName: gd-dc-secret
+              items:
+              - key: dc_iv_file
+                path: dc_iv_file
+              - key: dc_key_file
+                path: dc_key_file
+          - name: gd-db-conf
+            secret:
+              secretName: gd-db-conf
+              items:
+              - key: gd_db.conf
+                path: gd_db.conf
+          - name: gd-secret
+            secret:
+              secretName: gd-secret-1.0.0
+              items:
+              - key: hmac_key
+                path: hmac.key
+              - key: iam_conf
+                path: iam.conf
+              - key: vault_prod_conf
+                path: vault.prod.conf
+          restartPolicy: OnFailure

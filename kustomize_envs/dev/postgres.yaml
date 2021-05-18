@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      volumes:
+      - name: postgres-init-db
+        configMap:
+          # Provide the name of the ConfigMap containing the files you want
+          # to add to the container
+          name: postgres-init-db
+      #   - name: pg-data
+      #     emptyDir: {}
+      containers:
+      - name: postgres
+        image: postgres:10-alpine
+        resources:
+          requests:
+            cpu: 20m
+            memory: 64Mi
+          limits:
+            cpu: 1
+            memory: 1Gi
+        volumeMounts:
+        - name: postgres-init-db
+          mountPath: /docker-entrypoint-initdb.d/
+        #   - name: pg-data
+        #     mountPath: /var/lib/postgresql/data
+        ports:
+        - containerPort: 5432
+        env:
+          - name: POSTGRES_PASSWORD
+            value: postgres
+          - name: POSTGRES_USER
+            value: postgres
+          - name: POSTGRES_DB
+            value: dss
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432

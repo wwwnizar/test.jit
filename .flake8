@@ -1,0 +1,6 @@
+[flake8]
+per-file-ignores =
+    */steps/*.py: F811
+
+# Set the maximum length that any line (with some exceptions) may be.
+max-line-length = 120

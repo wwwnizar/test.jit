@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gd-ingest
+spec:
+  selector:
+    matchLabels:
+      app: gd-ingest
+      name: gd-ingest
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 2
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: gd-ingest
+        name: gd-ingest
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "14269"
+    spec:
+      volumes:
+        - name: gd-secret
+          secret:
+            secretName: gd-secret-1.0.0
+            items:
+            - key: kafka_conf
+              path: kafka.conf
+            - key: basic_auth_conf
+              path: basic_auth.conf
+            - key: github_conf
+              path: github.conf
+            - key: app_key
+              path: app.key
+            - key: email_conf
+              path: email.conf
+      containers:
+          - name: gd-ingest
+            image: "us.icr.io/git-defenders/dss:latest"
+            command: ["/code/detect_secrets_stream/gd_ingest/docker-entrypoint.sh"]
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: ROLLOUT_PERCENTAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: percentage-rollout
+                  key: rollout.percentage
+            - name: GD_KAFKA_CONF
+              value: "/gd-secret/kafka.conf"
+            - name: GD_BASIC_AUTH_CONF
+              value: "/gd-secret/basic_auth.conf"
+            - name: KAFKA_CLIENT_ID
+              value: gd-ingest
+            - name: GD_GITHUB_CONF
+              value: "/gd-secret/github.conf"
+            - name: GD_EMAIL_CONF
+              value: "/gd-secret/email.conf"
+            - name: APP_PRIVATE_KEY_FILENAME
+              value: "/gd-secret/app.key"
+            - name: APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: gd-secret-1.0.0
+                  key: APP_ID
+            volumeMounts:
+            - name: gd-secret
+              mountPath: "/gd-secret"
+              readOnly: true
+            ports:
+            - containerPort: 5000
+              name: http
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 5000
+              initialDelaySeconds: 1
+              periodSeconds: 2
+              failureThreshold: 20
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: 5000
+              initialDelaySeconds: 1
+              periodSeconds: 1
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                cpu: 1
+                memory: 1Gi
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["sleep", "15"]

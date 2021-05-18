@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gd-revoker
+spec:
+  selector:
+    matchLabels:
+      app: gd-revoker
+      name: gd-revoker
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 2
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: gd-revoker
+        name: gd-revoker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "14269"
+    spec:
+      volumes:
+      - name: gd-pri-key
+        secret:
+          secretName: gd-pri-key
+          items:
+          - key: encryption.key
+            path: encryption.key
+      - name: gd-pub-key
+        secret:
+          secretName: gd-pub-key
+          items:
+          - key: encryption.key.pub
+            path: encryption.key.pub
+      - name: gd-dc-secret
+        secret:
+          secretName: gd-dc-secret
+          items:
+          - key: dc_iv_file
+            path: dc_iv_file
+          - key: dc_key_file
+            path: dc_key_file
+      - name: gd-db-conf
+        secret:
+          secretName: gd-db-conf
+          items:
+          - key: gd_db.conf
+            path: gd_db.conf
+      - name: gd-secret
+        secret:
+          secretName: gd-secret-1.0.0
+          items:
+          - key: hmac_key
+            path: hmac.key
+          - key: iam_conf
+            path: iam.conf
+          - key: vault_prod_conf
+            path: vault.prod.conf
+          - key: github_conf
+            path: github.conf
+          - key: ghe_revocation_token
+            path: ghe_revocation.token
+          - key: db2_license
+            path: db2consv_zs.lic
+          - key: basic_auth_conf
+            path: basic_auth.conf
+          - key: revoker_urls_conf
+            path: revoker_urls.conf
+      containers:
+          - name: gd-revoker
+            image: "us.icr.io/git-defenders/dss:latest"
+            command: ["/code/detect_secrets_stream/gd_revoker/docker-entrypoint.sh"]
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: GD_PRI_KEY_FILENAME
+              value: "/gd-pri-key/encryption.key"
+            - name: GD_PUB_KEY_FILENAME
+              value: "/gd-pub-key/encryption.key.pub"
+            - name: GD_DC_IV_FILENAME
+              value: "/gd-dc-secret/dc_iv_file"
+            - name: GD_DC_KEY_FILENAME
+              value: "/gd-dc-secret/dc_key_file"
+            - name: GD_GITHUB_CONF
+              value: "/gd-secret/github.conf"
+            - name: GHE_REVOCATION_TOKEN_FILENAME
+              value: "/gd-secret/ghe_revocation.token"
+            - name: GD_DB_CONF
+              value: "/gd-db-conf/gd_db.conf"
+            - name: GD_IAM_CONF_FILENAME
+              value: "/gd-secret/iam.conf"
+            - name: GD_HMAC_KEY_FILENAME
+              value: "/gd-secret/hmac.key"
+            - name: GD_VAULT_CONF
+              value: "/gd-secret/vault.prod.conf"
+            - name: GD_BASIC_AUTH_CONF
+              value: "/gd-secret/basic_auth.conf"
+            - name: GD_REVOKER_URLS_CONF
+              value: "/gd-secret/revoker_urls.conf"
+            volumeMounts:
+            - name: gd-secret
+              mountPath: "/gd-secret"
+              readOnly: true
+            - name: gd-pri-key
+              mountPath: "/gd-pri-key"
+              readOnly: true
+            - name: gd-pub-key
+              mountPath: "/gd-pub-key"
+              readOnly: true
+            - name: gd-dc-secret
+              mountPath: "/gd-dc-secret"
+              readOnly: true
+            - name: gd-db-conf
+              mountPath: "/gd-db-conf"
+              readOnly: true
+            ports:
+            - containerPort: 5000
+              name: http
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 5000
+              initialDelaySeconds: 1
+              periodSeconds: 2
+              failureThreshold: 20
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: 5000
+              initialDelaySeconds: 1
+              periodSeconds: 1
+            resources:
+              requests:
+                cpu: 20m
+                memory: 64Mi
+              limits:
+                cpu: 1
+                memory: 1Gi
+            lifecycle:
+              preStop:
+                exec:
+                  command: ["sleep", "15"]
+              postStart:
+                exec:
+                  command:
+                    - /code/detect_secrets_stream/util/setup-db-license.sh

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gd-revoker
+  labels:
+    name: gd-revoker
+    type: service
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+  selector:
+    name: gd-revoker
+  type: ClusterIP
