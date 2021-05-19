@@ -44,27 +44,25 @@ brew install kustomize skaffold container-structure-test pipenv
 - Install python dependencies with `pipenv install --dev`
 - Initialize the pre-commit tool with `pre-commit install`
 
-## Secret Management
+## Local dev secrets
 
-We use [git-crypt](https://github.com/AGWA/git-crypt) to manage the secrets stored in this repo. To decrypt the secrets you need to
+To set up your local dev secrets, first run `./kustomize_envs/dev/gen-secret.sh`. It will create two hidden folders under `/kustomize_envs/dev/`:
 
-1. Install the git-crypt CLI
+- `secret_generated/` containing automatically-generated secrets. Secrets get regenerated when re-running `gen-secret.sh`.
+- `secret_manual/` containing manually-entered secrets. Running `gen-secret.sh` will generate a template for secrets under this folder. You do need to manually update each secret to match your environment. Re-running `gen-secret.sh` will not overwrite the files if they are non-empty.
 
-   ```sh
-   brew install git-crypt
-   ```
-
-2. Download the git-crypt encryption key to local as `<local_secret_key_file>`. IBM Cloud Key Protect is used to store encryption key. The access is only provided to detect-secrets admin.
-
-   ```sh
-   detect_secrets_stream/key-protect/get_key.sh git-crypt-key <local_secret_key_file>
-   ```
-
-3. unlock the encryption
-
-   ```sh
-   git-crypt unlock <local_secret_key_file>
-   ```
+This table contains information on what the values of the manually-entered secrets should be set to:
+| File name | Value |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app.key` | The test GitHub App's private key. Download this from the GitHub App config UI. |
+| `env.txt` | The test GitHub App's app ID. Obtained from the GitHub App config UI. |
+| `db2consv_zs.lic` | The IBM DB2 license certificate file. You can read more about how to retrieve it [here](https://www.ibm.com/docs/en/db2/11.1?topic=configuring-db2-licenses). This is only needed if looking for DB2 for z or DB2 for i secrets. |
+| `email.conf` | Your company's internal email regex. Replace `mycompany.com` with your company's email domain. |
+| `ghe_revocation.token` | The Jenkins job trigger token to revoke the GHE token. |
+| `github.conf` | `github.mycompany.com` - replace this with your company's GHE domain. `tokens` - a list of GitHub API tokens. This token pool is necessary for when a single token's rate limit has been reached. |
+| `iam.conf` | The IBM Cloud IAM API key for an admin account which can resolve an IBM Cloud IAM token owner. |
+| `kafka.conf` | `brokers_sasl` - comma-separated Kafka broker list. For example `broker-1:9093,broker-2:9093,broker-3:9093`. `api_key` - Kafka API key to publish and consume from the queue. When using [IBM Cloud Events Stream service](https://www.ibm.com/cloud/event-streams), you can obtain such value from the Events Stream console by navigating to the Service credentials panel and creating a new service credential. `brokers_sasl` is the value of `kafka_brokers_sasl` (without `"` or spaces) from your service credential. `api_key` is the value of `api_key` from your service credential. |
+| `revoker_urls.conf` | Replace `github.mycompany.com` with your company's GHE URL, `artifactory` with your company's artifactory URL, and `jenkins` with your company's Jenkins URL, which should contain a Jenkins job to revoke the GHE token. |
 
 ## Tests
 
