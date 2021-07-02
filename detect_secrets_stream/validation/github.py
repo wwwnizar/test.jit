@@ -18,6 +18,7 @@ class GHEValidator(BaseValidator):
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.ghe_instance = ConfUtil.load_github_conf()['host']
 
     @staticmethod
     def secret_type_name():
@@ -25,7 +26,10 @@ class GHEValidator(BaseValidator):
 
     def validate(self, secret, other_factors=None):
         try:
-            result = GheDetector().verify(secret)
+            if self.ghe_instance:
+                result = GheDetector(ghe_instance=self.ghe_instance).verify(secret)
+            else:
+                result = GheDetector().verify(secret)
             if result == VerifiedResult.VERIFIED_TRUE:
                 return True
             elif result == VerifiedResult.VERIFIED_FALSE:
