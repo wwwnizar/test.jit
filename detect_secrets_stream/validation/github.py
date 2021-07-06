@@ -84,7 +84,8 @@ class GHEValidator(BaseValidator):
             json = {'hash': self.hash_token(secret)}
             response = requests.post(revocation_endpoint, headers=headers, params=params, json=json)
             response.raise_for_status()
-            return response.json()['jobs']['Revoke Hashed GHE Token']['triggered'] is True
+            jobs = response.json()['jobs']
+            return type(jobs) is list and len(jobs) > 0 and jobs[0]['triggered'] is True
         except requests.exceptions.RequestException as e:
             self.logger.error(
                 f'Unexpected request exception while revoking token. Error {e}', exc_info=1,
