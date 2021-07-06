@@ -18,6 +18,7 @@ class GHEValidator(BaseValidator):
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.ghe_instance = ConfUtil.load_github_conf()['host']
 
     @staticmethod
     def secret_type_name():
@@ -25,7 +26,10 @@ class GHEValidator(BaseValidator):
 
     def validate(self, secret, other_factors=None):
         try:
-            result = GheDetector().verify(secret)
+            if self.ghe_instance:
+                result = GheDetector(ghe_instance=self.ghe_instance).verify(secret)
+            else:
+                result = GheDetector().verify(secret)
             if result == VerifiedResult.VERIFIED_TRUE:
                 return True
             elif result == VerifiedResult.VERIFIED_FALSE:
@@ -80,7 +84,8 @@ class GHEValidator(BaseValidator):
             json = {'hash': self.hash_token(secret)}
             response = requests.post(revocation_endpoint, headers=headers, params=params, json=json)
             response.raise_for_status()
-            return response.json()['jobs']['Revoke Hashed GHE Token']['triggered'] is True
+            jobsreslist = [v for v in response.json()['jobs'].values()]
+            return jobsreslist[0]['triggered'] is True
         except requests.exceptions.RequestException as e:
             self.logger.error(
                 f'Unexpected request exception while revoking token. Error {e}', exc_info=1,
