@@ -36,4 +36,4 @@ ibm-db = "==3.1.1"
 detect-secrets = {ref = "0.13.1+ibm.47.dss", git = "https://github.com/ibm/detect-secrets.git"}
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
