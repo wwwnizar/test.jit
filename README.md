@@ -1,4 +1,6 @@
-# Detect Secrets Stream [![Build Status](https://travis-ci.com/IBM/detect-secrets-stream.svg?branch=main)](https://travis-ci.com/IBM/detect-secrets-stream.svg?branch=main)
+# Detect Secrets Stream
+
+[![Build Status](https://travis-ci.com/IBM/detect-secrets-stream.svg?branch=main)](https://travis-ci.com/IBM/detect-secrets-stream.svg?branch=main)
 
 ## Description
 

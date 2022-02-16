@@ -1,6 +1,6 @@
 # local end 2 end test
 
-This doc describes how to use `skaffold` to run a detect-secrets-stream instance in a local kube env and run some end 2 end test.
+This document describes how to use [`skaffold`](https://skaffold.dev/docs/references/cli/) to run a detect-secrets-stream instance in a local Kubernetes environment and run some end to end tests.
 
 ## Dependencies
 
@@ -10,11 +10,11 @@ This doc describes how to use `skaffold` to run a detect-secrets-stream instance
   - `kustomize_envs/dev/secret_manual/app.key` stores the private key for this test Github App
   - `APP_ID` in `kustomize_envs/dev/secret_manual/env.txt` stores the Github App ID
 - a kafka queue named `diff-scan`
-  - You can request a free kafka instance in your own IBM Cloud account. Service link: https://cloud.ibm.com/catalog/services/event-streams. Once created, generate a queue named `diff-scan` in the kafka instance. **TODO** parameterize queue name
+  - You can request a free Kafka instance in your own IBM Cloud account. The service can be found [here](https://cloud.ibm.com/catalog/services/event-streams). Once created, generate a queue named `diff-scan` in the kafka instance. **TODO** parameterize queue name
 
 ### ondemand provision
 
-The resource below would be automatically provisioned when you run skaffold
+The resources below will be automatically provisioned when you run [`skaffold`](https://skaffold.dev/docs/references/cli/):
 
 - postgres
 - vault
@@ -46,7 +46,7 @@ kind delete cluster
 
 ## Execute test
 
-The ingest script reads payload from `kustomize_envs/dev/test/ingest.payload.json`, you can edit that file to customize the payload such as which repo and which commit to ingest.
+The ingest script reads payloads from `kustomize_envs/dev/test/ingest.payload.json`; you can edit this file to customize the payload, such as which repo and which commit to ingest.
 
 ```shell
 # Ingest token by sending payload to ingest layer

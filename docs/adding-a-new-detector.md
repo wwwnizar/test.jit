@@ -20,7 +20,7 @@ Adding a new type of detector to detect-secrets-suite is a multi-stage process. 
 
 For detailed instructions on developing a new secret detector, see:
 
-- [`IBM/detect-secrets` CONTRIBUTING.md - Process for Adding a New Secret Detector to whitewater-detect-secrets](https://github.com/IBM/detect-secrets/blob/master/CONTRIBUTING.md#process-for-adding-a-new-secret-detector-to-whitewater-detect-secrets)
+- [`IBM/detect-secrets` CONTRIBUTING.md - Process for Adding a New Secret Detector to detect-secrets](https://github.com/IBM/detect-secrets/blob/master/CONTRIBUTING.md#process-for-adding-a-new-secret-detector-to-detect-secrets)
 - [`IBM/detect-secrets-stream` CONTRIBUTING.md - Process for Supporting a New Secret Type in detect-secrets-stream](../CONTRIBUTING.md#process-for-supporting-a-new-secret-type-in-detect-secrets-stream)
 
 Please open one or more PRs using the instructions above.

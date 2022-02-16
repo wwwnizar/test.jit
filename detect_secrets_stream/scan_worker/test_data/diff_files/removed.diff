@@ -9,8 +9,8 @@ index 456100d..dc6b7e2 100644
 -# Remove the fake gd_db_tools that exists for testing until mono-repo is implemented
 -RUN rm -f ./gd_db_tools.py
 -
- # Copy /whitewater-detect-secrets from builder stage
- COPY --from=builder /whitewater-detect-secrets /whitewater-detect-secrets
+ # Copy /detect-secrets from builder stage
+ COPY --from=builder /detect-secrets /detect-secrets
 
 diff --git a/diffscanworker_test.py b/diffscanworker_test.py
 index 16bb25c..651dfcb 100644
