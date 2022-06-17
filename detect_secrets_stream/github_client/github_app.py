@@ -51,7 +51,7 @@ class GitHubApp(object):
             }
 
             jwt_token = jwt.encode(payload, self._app_private_key, algorithm='RS256')
-            self._app_github = GitHub(token_list=[jwt_token.decode('ascii')])
+            self._app_github = GitHub(token_list=[jwt_token])
 
     def _get_installation_id(self, org_or_repo):
         """ Gets the installation id of the app for the given org, repo, or user.

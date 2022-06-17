@@ -50,7 +50,7 @@ class TestIBMCloudIAMValidator:
         mock_verify.return_value = magic_mock_verify = MagicMock()
         magic_mock_verify.status_code = 200
         magic_mock_verify.json.return_value = {'account': {'bss': 123}}
-        jwt_token = jwt.encode({'test': 'dict'}, '').decode()
+        jwt_token = jwt.encode({'test': 'dict'}, '')
         responses.add(
             responses.POST, 'https://iam.cloud.ibm.com/identity/token',
             json={'access_token': jwt_token}, status=200,
@@ -111,7 +111,7 @@ class TestIBMCloudIAMValidator:
         mock_verify.return_value = magic_mock_verify = MagicMock()
         magic_mock_verify.status_code = 200
         magic_mock_verify.json.return_value = {'account': {'bss': 123}}
-        jwt_token = jwt.encode({'test': 'dict'}, '').decode()
+        jwt_token = jwt.encode({'test': 'dict'}, '')
         responses.add(
             responses.POST, 'https://iam.cloud.ibm.com/identity/token',
             json={'access_token': jwt_token}, status=200,
@@ -130,7 +130,7 @@ class TestIBMCloudIAMValidator:
         mock_verify.return_value = magic_mock_verify = MagicMock()
         magic_mock_verify.status_code = 200
         magic_mock_verify.json.return_value = {'account': {'bss': 123}}
-        jwt_token = jwt.encode({'test': 'dict'}, '').decode()
+        jwt_token = jwt.encode({'test': 'dict'}, '')
         responses.add(
             responses.POST, 'https://iam.cloud.ibm.com/identity/token',
             json={'access_token': jwt_token}, status=200,
@@ -154,7 +154,7 @@ class TestIBMCloudIAMValidator:
 
     @responses.activate
     def test_generate_access_token(self):
-        jwt_token = jwt.encode({'test': 'dict'}, '').decode()
+        jwt_token = jwt.encode({'test': 'dict'}, '')
         responses.add(
             responses.POST, 'https://iam.cloud.ibm.com/identity/token',
             json={'access_token': jwt_token}, status=200,
@@ -278,7 +278,7 @@ class TestIBMCloudIAMValidator:
         mock_verify.return_value = magic_mock_verify = MagicMock()
         magic_mock_verify.status_code = 200
 
-        jwt_token = jwt.encode({'test': 'dict'}, '').decode()
+        jwt_token = jwt.encode({'test': 'dict'}, '')
         responses.add(
             responses.POST, 'https://iam.cloud.ibm.com/identity/token',
             json={'access_token': jwt_token}, status=200,
@@ -311,7 +311,7 @@ class TestIBMCloudIAMValidator:
         mock_verify.return_value = magic_mock_verify = MagicMock()
         magic_mock_verify.status_code = 200
 
-        jwt_token = jwt.encode({'test': 'dict'}, '').decode()
+        jwt_token = jwt.encode({'test': 'dict'}, '')
         responses.add(
             responses.POST, 'https://iam.cloud.ibm.com/identity/token',
             json={'access_token': jwt_token}, status=200,
